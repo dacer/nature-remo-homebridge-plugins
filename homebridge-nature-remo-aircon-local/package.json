@@ -1,0 +1,24 @@
+{
+  "name": "homebridge-nature-remo-aircon-local",
+  "version": "0.0.1",
+  "description": "Homebridge plugin for air conditioner with Nature Remo local api",
+  "main": "index.js",
+  "keywords": [
+    "homebridge-plugin",
+    "homekit"
+  ],
+  "author": "Dacer",
+  "licenses": [
+    {
+      "name": "cc by-nc-sa 4.0",
+      "url": "http://creativecommons.org/licenses/by-nc-sa/4.0/"
+    }
+  ],
+  "engines": {
+    "homebridge": ">= 0.4.0"
+  },
+  "dependencies": {
+    "node-dns-sd": "0.4.0",
+    "node-fetch": "^2.6.0"
+  }
+}
