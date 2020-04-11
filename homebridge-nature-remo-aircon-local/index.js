@@ -21,13 +21,12 @@ class NatureRemoAirconLocal {
     this.log = log
     this.config = config
 
-    this._address = null
-    this._updateAddressPromise = null
-    this._state = false
+    this._address = config.remo_ip
+    // 0: shutdown; 1: heat; 2: cool; 3: auto
+    this._state = 0
     this._temperature = 24
     this._inProgress = false
-
-    this._updateAddress()
+    this._temperatureUnit = 0
 
     this._infoService = new Service.AccessoryInformation()
     this._infoService
@@ -61,19 +60,14 @@ class NatureRemoAirconLocal {
   }
 
   getHeatingCoolingState(callback) {
-    callback(null, 3) //todo
-  }
-
-  async _setHeatingCoolingState(value, callback) {
-    this.log(`_setHeatingCoolingState ${value}`)
-    callback()
+    callback(null, this._state)
   }
 
   getCurrentTemperature(callback) {
     callback(null, 24) //todo
   }
   getTargetTemperature(callback) {
-    callback(null, this._temperature) //todo
+    callback(null, this._temperature)
   }
 
   async _setTargetTemperature(value, callback) {
@@ -83,28 +77,25 @@ class NatureRemoAirconLocal {
   }
 
   getTemperatureDisplayUnits(callback) {
-    callback(null, 0)
+    callback(null, this._temperatureUnit)
   }
 
   async _setTemperatureDisplayUnits(value, callback) {
     this.log(`_setTemperatureDisplayUnits ${value}`)
+    this._temperatureUnit = value
     callback()
   }
 
-  async _setState(on, callback) {
-    if (!await this._updateAddress()) {
-      callback(new Error('Unable to find Nature Remove'))
-      return
-    }
-
-    if (on === this._state) {
+  async _setHeatingCoolingState(state, callback) {
+    this.log(`_setHeatingCoolingState ${state}`)
+    if (state === this._state) {
       callback()
       return
     }
 
     // If we are still sending signals, do not change state.
     if (this._inProgress) {
-      this.log(`Can not change state to ${on} as there is operation in progress`)
+      this.log(`Can not change state to ${state} as there is operation in progress`)
       callback()
       setTimeout(() => {
         // There is no way to prevent changing state, so we have to flip after
@@ -116,17 +107,27 @@ class NatureRemoAirconLocal {
     }
 
     // Start sending signals.
-    this._sendSignals(on)
+    this._sendSignals(state)
 
     // Return immediately as the signals may spend quite a while to finish.
-    this._state = on
+    this._state = state
     callback()
   }
 
-  async _sendSignals(on) {
+  async _sendSignals(state) {
     this._inProgress = true
-
-    const commands = this.config[on ? 'on' : 'off'].map((it) => {
+    let stateName = "shutdown"
+    if (state == 0) {
+      stateName = 'shutdown';
+    } else if (state == 1) {
+      stateName = 'heat';
+    } else if (state == 2) {
+      stateName = 'cool';
+    } else if (state == 3) {
+      //ignore
+    }
+    this.log(`Sending signal: ${stateName}`)
+    const commands = this.config[stateName].map((it) => {
       return {delay: it.delay ? it.delay : 0, signal: this.config.signals[it.signal]}
     })
 
@@ -137,10 +138,6 @@ class NatureRemoAirconLocal {
       }
     } catch (e) {
       this.log(`Sending signal fails: ${e.message}`)
-
-      // Try to get new address.
-      this._address = null
-      this._updateAddress()
     }
 
     this._inProgress = false
@@ -179,59 +176,8 @@ class NatureRemoAirconLocal {
       }
     }
   }
-
-  async _updateAddress() {
-    // Wait if address is updating.
-    if (this._updateAddressPromise)
-      return this._updateAddressPromise
-
-    // Return immediately if we already have address.
-    if (this._address)
-      return true
-
-    this.log('Search for Nature Remo devices')
-    this._updateAddressPromise = this._findAddress().then((address) => {
-      this._address = address
-      if (this._address)
-        this.log(`Found ${this._address}`)
-      else
-        this.log('No Nature Remo device found')
-
-      this._updateAddressPromise = null
-      return !!this._address
-    })
-    return this._updateAddressPromise
-  }
-
-  async _findAddress() {
-    const devices = await getRemoDevices()
-
-    // No device found.
-    if (devices.length === 0) {
-      return null
-    }
-    // Instance specified.
-    if (this.config.instance) {
-      for (const device of devices) {
-        if (device.fqdn.includes(this.config.instance))
-          return device.address
-      }
-      return null
-    }
-    // Use the first one found.
-    return devices[0].address
-  }
 }
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-async function getRemoDevices() {
-  try {
-    return await mDnsSd.discover({name: '_remo._tcp.local'})
-  } catch {
-    // Ignore error.
-  }
-  return []
 }

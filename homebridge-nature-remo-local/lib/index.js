@@ -21,12 +21,9 @@ class NatureRemo {
     this.log = log
     this.config = config
 
-    this._address = "192.168.3.6"
-    this._updateAddressPromise = null
+    this._address = config.remo_ip
     this._state = false
     this._inProgress = false
-
-    this._updateAddress()
 
     this._infoService = new Service.AccessoryInformation()
     this._infoService
@@ -38,28 +35,13 @@ class NatureRemo {
     this._switchService.getCharacteristic(Characteristic.On)
         .on('set', this._setState.bind(this))
         .on('get', (callback) => callback(null, this._state))
-
-    if (config.learnButton) {
-      this._learnService = new Service.Switch('Learn Signal', 'remo-learn')
-      this._learnService.getCharacteristic(Characteristic.On)
-          .on('set', this._printLeantSignal.bind(this))
-          .on('get', (callback) => callback(null, false))
-    }
   }
 
   getServices() {
-    const services = [this._infoService, this._switchService]
-    if (this._learnService)
-      services.push(this._learnService)
-    return services
+    return [this._infoService, this._switchService]
   }
 
   async _setState(on, callback) {
-    if (!await this._updateAddress()) {
-      callback(new Error('Unable to find Nature Remove'))
-      return
-    }
-
     if (on === this._state) {
       callback()
       return
@@ -100,10 +82,6 @@ class NatureRemo {
       }
     } catch (e) {
       this.log(`Sending signal fails: ${e.message}`)
-
-      // Try to get new address.
-      this._address = "192.168.3.6"
-      this._updateAddress()
     }
 
     this._inProgress = false
@@ -145,86 +123,8 @@ class NatureRemo {
     }
   }
 
-  async _printLeantSignal(on, callback) {
-    if (!await this._updateAddress()) {
-      callback(new Error('Unable to find Nature Remove'))
-      return
-    }
-
-    try {
-      const res = await fetch(`http://${this._address}/messages`, {
-        headers: {'X-Requested-With': 'curl'},
-        timeout: 10 * 1000
-      })
-      const json = await res.json()
-      const signal = [json.format, json.freq].concat(json.data)
-      this.log(`Last signal: ${signal}`)
-    } catch (e) {
-      this.log(`Failed to fetch signal: ${e.message}`)
-      callback(e)
-      return
-    }
-
-    callback()
-    // Flip switch back.
-    setTimeout(() => {
-      this._learnService.updateCharacteristic(hap.Characteristic.On, false)
-    }, 1000)
-  }
-
-  async _updateAddress() {
-    // Wait if address is updating.
-    if (this._updateAddressPromise)
-      return this._updateAddressPromise
-
-    // Return immediately if we already have address.
-    if (this._address)
-      return true
-
-    this.log('Search for Nature Remo devices')
-    this._updateAddressPromise = this._findAddress().then((address) => {
-      this._address = address
-      if (this._address)
-        this.log(`Found ${this._address}`)
-      else
-        this.log('No Nature Remo device found')
-
-      this._updateAddressPromise = null
-      return !!this._address
-    })
-    return this._updateAddressPromise
-  }
-
-  async _findAddress() {
-    const devices = await getRemoDevices()
-
-    // No device found.
-    if (devices.length === 0) {
-      return null
-    }
-    // Instance specified.
-    if (this.config.instance) {
-      for (const device of devices) {
-        if (device.fqdn.includes(this.config.instance))
-          return device.address
-      }
-      return null
-    }
-    // Use the first one found.
-    return devices[0].address
-  }
 }
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-async function getRemoDevices() {
-  try {
-    console.log("getRemoDevices")
-    return await mDnsSd.discover({name: '_remo._tcp.local'})
-  } catch {
-    console.log("error")
-  }
-  return []
 }

@@ -11,8 +11,7 @@ Example:
   {
     "accessory": "NatureRemoAirconLocal",
     "name": "Aircon",
-    "host": "192.168.X.X",
-    "instance": "Remo-XXXX",
+    "remo_ip": "192.168.X.X",
     "signals": {
       "heat": [...],
       "cool": [...],
