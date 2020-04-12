@@ -31,14 +31,20 @@ class NatureRemo {
         .setCharacteristic(Characteristic.Model, 'Nature Remo')
         .setCharacteristic(Characteristic.SerialNumber, '90-11-27')
 
-    this._switchService = new Service.Switch(config.name, 'remo-send')
-    this._switchService.getCharacteristic(Characteristic.On)
+    if (config.type === "light") {
+      this.log("lightbulb")
+      this._myService = new Service.Lightbulb(config.name, 'remo-send')
+    } else {
+      this.log("switch")
+      this._myService = new Service.Switch(config.name, 'remo-send')
+    }
+    this._myService.getCharacteristic(Characteristic.On)
         .on('set', this._setState.bind(this))
         .on('get', (callback) => callback(null, this._state))
   }
 
   getServices() {
-    return [this._infoService, this._switchService]
+    return [this._infoService, this._myService]
   }
 
   async _setState(on, callback) {
