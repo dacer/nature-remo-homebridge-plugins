@@ -48,10 +48,10 @@ class NatureRemo {
   }
 
   async _setState(on, callback) {
-    if (on === this._state) {
-      callback()
-      return
-    }
+    // if (on === this._state) {
+    //   callback()
+    //   return
+    // }
 
     // If we are still sending signals, do not change state.
     if (this._inProgress) {
