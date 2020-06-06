@@ -10,7 +10,7 @@ Homebridge plugin for Nature Remo using local APIs.
     "accessory": "NatureRemo",
     "name": "TV",
     "remo_ip": "192.168.0.1",
-    "type": "switch", //[switch, light] default: switch
+    "type": "switch", //[switch, light, fan] default: switch
     "signals" {
       "power": [...],
       "enter": [...]

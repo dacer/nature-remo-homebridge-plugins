@@ -34,6 +34,9 @@ class NatureRemo {
     if (config.type === "light") {
       this.log("lightbulb")
       this._myService = new Service.Lightbulb(config.name, 'remo-send')
+    } else if (config.type === "fan") {
+      this.log("fan")
+      this._myService = new Service.Fan(config.name, 'remo-send')
     } else {
       this.log("switch")
       this._myService = new Service.Switch(config.name, 'remo-send')
